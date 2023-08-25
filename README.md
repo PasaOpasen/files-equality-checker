@@ -97,9 +97,9 @@ Comparing tests/data/regions.py <---> tests/data/regions.py    OK
 Comparing tests/data/regions.py <---> tests/data/regions.py
      Comparing regions RG 1 <---> RG 1     OK
      Comparing regions RG 1 <---> RG 3     FAILURE
-        --- region RG 1 in tests/data/regions.py (chars [15:21])
+        --- region 'RG 1' in tests/data/regions.py (chars [15:21])
 
-        +++ region RG 3 in tests/data/regions.py (chars [80:144])
+        +++ region 'RG 3' in tests/data/regions.py (chars [80:144])
 
         @@ -1,3 +1,9 @@
 

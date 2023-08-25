@@ -325,8 +325,8 @@ def compare_files_regions(sourse: str, dest: str, regions: Sequence[PythoRegion]
             diff_info = text_diff(
                 s[ss_start: ss_end],
                 d[dd_start: dd_end],
-                label1=f"region {ss} in {sourse} (chars [{ss_start}:{ss_end}])",
-                label2=f"region {dd} in {dest} (chars [{dd_start}:{dd_end}])"
+                label1=f"region '{ss}' in {sourse} (chars [{ss_start}:{ss_end}])",
+                label2=f"region '{dd}' in {dest} (chars [{dd_start}:{dd_end}])"
             )
 
             if diff_info:
