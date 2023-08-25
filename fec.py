@@ -2,10 +2,12 @@
 from typing import Union, Sequence, TypedDict, List, Optional, Dict, Tuple, Any
 
 import os
+import sys
 from pathlib import Path
 import difflib
 import re
 import json
+import argparse
 
 
 TAB = '    '
@@ -323,13 +325,15 @@ def compare_files_regions(sourse: str, dest: str, regions: Sequence[PythoRegion]
             diff_info = text_diff(
                 s[ss_start: ss_end],
                 d[dd_start: dd_end],
-                label1=f"region {ss} in {sourse} ([{ss_start}:{ss_end}])",
-                label2=f"region {dd} in {dest}   ([{ss_start}:{ss_end}])"
+                label1=f"region {ss} in {sourse} (chars [{ss_start}:{ss_end}])",
+                label2=f"region {dd} in {dest} (chars [{dd_start}:{dd_end}])"
             )
 
             if diff_info:
                 res = False
                 print_status(diff_info, dept=2)
+            else:
+                print_status('', dept=2)
 
     return res
 
@@ -346,7 +350,7 @@ def file_comp(request: CompRequest) -> Union[str, bool]:
         f"Comparing {s} <---> {d}", end=''
     )
 
-    regions = request['regions']
+    regions = request.get('regions')
     if not regions:  # compare files fully
         r = file_comp_total(s, d)
         print_status(r)
@@ -374,4 +378,36 @@ def main(
 
 
 #endregion
+
+#region CLI
+
+parser = argparse.ArgumentParser(
+    prog='fec.py',
+    description=(
+        'Script which which checks if the files are equal totally or partially depending on target criteria'
+    ),
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter
+)
+
+parser.add_argument('CONFIG_FILE', type=str, help='json file with the comparing configuration')
+parser.add_argument(
+    '-r', '--raise-on-errors', action='store_true',
+    help='whether to raise an Exception when some differences are found',
+    dest='raise_on_errors'
+)
+
+#endregion
+
+
+if __name__ == '__main__':
+
+    parsed = parser.parse_args(sys.argv[1:])
+    main(
+        config=parsed.CONFIG_FILE,
+        raise_on_errors=parsed.raise_on_errors
+    )
+
+
+
+
 
