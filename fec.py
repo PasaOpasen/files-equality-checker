@@ -1,10 +1,11 @@
 
-from typing import Union, Sequence, Dict, TypedDict, List, Optional, Dict, Tuple
+from typing import Union, Sequence, TypedDict, List, Optional, Dict, Tuple, Any
 
 import os
 from pathlib import Path
 import difflib
 import re
+import json
 
 
 TAB = '    '
@@ -46,6 +47,11 @@ def read_text(result_path: Union[str, os.PathLike], encoding: str = 'utf-8'):
 
 def read_bytes(path: Union[str, os.PathLike]) -> bytes:
     return Path(path).read_bytes()
+
+
+def read_json(path: str):
+    with open(path, 'r') as f:
+        return json.load(f)
 
 
 def stat(path: Union[str, os.PathLike]) -> str:
@@ -220,6 +226,8 @@ def find_start_end_pairs(starts: Sequence[int], ends: Sequence[int]) -> Dict[int
 
 #endregion
 
+#region COMPARING
+
 def print_status(status: str, dept: int = 1):
     """print the message about success or failure"""
     if status:
@@ -283,7 +291,47 @@ def file_comp_total(source: str, dest: str) -> str:
 
 
 def compare_files_regions(sourse: str, dest: str, regions: Sequence[PythoRegion]) -> Union[str, bool]:
-    return ''
+
+    s = read_text(sourse)
+    d = read_text(dest)
+
+    sreg = find_regions(s)
+    dreg = find_regions(d)
+
+    res = True
+
+    for r in regions:
+        ss = r['in_source']
+        dd = r['in_dest']
+
+        print(f"{TAB} Comparing regions {ss} <---> {dd} ", end='')
+
+        for reg_name, regions_dict, file in (
+            (ss, sreg, sourse),
+            (dd, dreg, dest),
+        ):
+            if reg_name not in regions_dict:
+                res = False
+                print_status(
+                    f"there is no region {reg_name} in {file}, available regions: {sorted(regions_dict.keys())}",
+                    dept=2
+                )
+                break
+        else:
+            ss_start, ss_end = sreg[ss]
+            dd_start, dd_end = dreg[dd]
+            diff_info = text_diff(
+                s[ss_start: ss_end],
+                d[dd_start: dd_end],
+                label1=f"region {ss} in {sourse} ([{ss_start}:{ss_end}])",
+                label2=f"region {dd} in {dest}   ([{ss_start}:{ss_end}])"
+            )
+
+            if diff_info:
+                res = False
+                print_status(diff_info, dept=2)
+
+    return res
 
 
 def file_comp(request: CompRequest) -> Union[str, bool]:
@@ -308,4 +356,22 @@ def file_comp(request: CompRequest) -> Union[str, bool]:
         return compare_files_regions(s, d, regions)
 
 
+def main(
+    config: str,
+    raise_on_errors: bool = True
+):
+
+    print(f"Reading the config from {config}")
+    config: List[CompRequest] = read_json(config)
+
+    res = True
+    for item in config:
+        r = file_comp(item)
+        res = res and r
+
+    if raise_on_errors and not res:
+        raise Exception("some diffs found")
+
+
+#endregion
 
