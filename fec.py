@@ -306,7 +306,7 @@ def compare_files_regions(sourse: str, dest: str, regions: Sequence[PythoRegion]
         ss = r['in_source']
         dd = r['in_dest']
 
-        print(f"{TAB} Comparing regions {ss} <---> {dd} ", end='')
+        print(f"{TAB} Comparing regions '{ss}' <---> '{dd}' ", end='')
 
         for reg_name, regions_dict, file in (
             (ss, sreg, sourse),
@@ -315,7 +315,7 @@ def compare_files_regions(sourse: str, dest: str, regions: Sequence[PythoRegion]
             if reg_name not in regions_dict:
                 res = False
                 print_status(
-                    f"there is no region {reg_name} in {file}, available regions: {sorted(regions_dict.keys())}",
+                    f"there is no region '{reg_name}' in {file}, available regions: {sorted(regions_dict.keys())}",
                     dept=2
                 )
                 break
