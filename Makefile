@@ -1,6 +1,9 @@
 
 
-doctest:
+_doctest:
 	venv/bin/python -m pytest --doctest-modules fec.py
 
-t: doctest
+doctest:
+	python -m pytest --doctest-modules fec.py
+
+t: _doctest
