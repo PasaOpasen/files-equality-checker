@@ -10,13 +10,7 @@
             {
                 "in_source": "RG 1",
                 "in_dest": "RG 1"
-            }
-        ]
-    },
-    {
-        "source": "tests/data/regions.py",
-        "dest": "tests/data/regions.py",
-        "regions": [
+            },
             {
                 "in_source": "RG 1",
                 "in_dest": "RG 3"

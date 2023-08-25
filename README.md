@@ -73,13 +73,7 @@ optional arguments:
             {
                 "in_source": "RG 1",
                 "in_dest": "RG 1"
-            }
-        ]
-    },
-    {
-        "source": "tests/data/regions.py",
-        "dest": "tests/data/regions.py",
-        "regions": [
+            },
             {
                 "in_source": "RG 1",
                 "in_dest": "RG 3"
@@ -102,7 +96,6 @@ Reading the config from tests/data/config.json...
 Comparing tests/data/regions.py <---> tests/data/regions.py    OK
 Comparing tests/data/regions.py <---> tests/data/regions.py
      Comparing regions RG 1 <---> RG 1     OK
-Comparing tests/data/regions.py <---> tests/data/regions.py
      Comparing regions RG 1 <---> RG 3     FAILURE
         --- region RG 1 in tests/data/regions.py (chars [15:21])
 
