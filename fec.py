@@ -1,9 +1,10 @@
 
-from typing import Union, Sequence, Dict, TypedDict, List, Optional
+from typing import Union, Sequence, Dict, TypedDict, List, Optional, Dict, Tuple
 
 import os
 from pathlib import Path
 import difflib
+import re
 
 
 TAB = '    '
@@ -52,8 +53,8 @@ def stat(path: Union[str, os.PathLike]) -> str:
 
 #endregion
 
+#region STRINGS
 
-#region FUNCS
 
 def filter_empty_lines(text: str) -> str:
     return '\n'.join(
@@ -61,6 +62,117 @@ def filter_empty_lines(text: str) -> str:
         if s.strip()
     )
 
+
+def find_regions(file_text: str) -> Dict[str, Tuple[int, int]]:
+    """
+    searches for regions in the text of the (python) file
+    Args:
+        file_text:
+
+    Returns:
+        dict {region name: (region start index, region end index)} where #region lines excluded
+
+    >>> t = read_text('tests/data/regions.py')
+    >>> dct = find_regions(t)
+    >>> assert sorted(dct.keys()) == sorted(['RG 1', 'RG 2', 'RG 3', 'RG 3.1', 'RG 3.2'])
+    >>> def show_part(region_name: str):
+    ...     s, e = dct[region_name]
+    ...     txt = t[s: e]
+    ...     print(filter_empty_lines(txt))
+    >>> show_part('RG 1')
+    1
+    1
+    1
+    >>> show_part('RG 3')
+    # region RG 3.1
+    3.1
+    #endregion
+    #region RG 3.2
+    3.2
+    #endregion
+    """
+
+    start_matches = list(
+        re.finditer(r"^#\s?region\s", file_text, re.MULTILINE)
+    )
+    if not start_matches:
+        return {}
+
+    end_matches = list(
+        re.finditer(r"^#\s?endregion\s", file_text, re.MULTILINE)
+    )
+    if not end_matches:
+        return {}
+
+    ends = [m.start() for m in end_matches]
+    start_to_region: Dict[int, str] = {}
+    """map {index of region start -> region name}"""
+
+    for m in start_matches:
+        start = file_text.find('\n', m.start()) + 1
+        text = file_text[m.start(): start]
+        name = text.split('region', 1)[1].strip()
+        start_to_region[start] = name
+
+    start_to_end = find_start_end_pairs(
+        starts=list(start_to_region.keys()), ends=ends
+    )
+
+    return {
+        start_to_region[start]: (start, end)
+        for start, end in start_to_end.items()
+    }
+
+
+def text_diff(text1: str, text2: str, label1: str = 'text1', label2: str = 'text2') -> str:
+    """
+    compares 2 texts and returns diff result string
+    Args:
+        text1:
+        text2:
+        label1: name of the text1 source
+        label2:
+
+    Returns:
+
+    >>> s = text_diff('a', 'a')
+    >>> assert not s, f"must be no diffs"
+    >>> print(text_diff('a134', 'a13'))
+    --- text1
+    <BLANKLINE>
+    +++ text2
+    <BLANKLINE>
+    @@ -1 +1 @@
+    <BLANKLINE>
+    -a134
+    +a13
+
+    """
+    diff = difflib.unified_diff(
+        text1.splitlines(),
+        text2.splitlines(),
+        fromfile=label1,
+        tofile=label2,
+    )
+    return '\n'.join(diff)
+
+
+def shift_text(text: str, linesep: str = '\n', dept: int = 1) -> str:
+    """
+    >>> shift_text('t')
+    '    t'
+    >>> print(shift_text('t;tt', linesep=';'))
+        t;    tt
+    >>> 'a' + shift_text('b', dept=3)
+    'a            b'
+    """
+    t = TAB * dept
+    return t + f'{linesep}{t}'.join(text.split(linesep))
+
+#endregion
+
+
+#region FUNCS
 
 def find_start_end_pairs(starts: Sequence[int], ends: Sequence[int]) -> Dict[int, int]:
     """
@@ -103,42 +215,19 @@ def find_start_end_pairs(starts: Sequence[int], ends: Sequence[int]) -> Dict[int
     return res
 
 
-def text_diff(text1: str, text2: str, label1: str = 'text1', label2: str = 'text2') -> str:
-    """
-    compares 2 texts and returns diff result string
-    Args:
-        text1:
-        text2:
-        label1: name of the text1 source
-        label2:
-
-    Returns:
-
-    >>> s = text_diff('a', 'a')
-    >>> assert not s, f"must be no diffs"
-    >>> print(text_diff('a134', 'a13'))
-    --- text1
-    <BLANKLINE>
-    +++ text2
-    <BLANKLINE>
-    @@ -1 +1 @@
-    <BLANKLINE>
-    -a134
-    +a13
-
-    """
-    diff = difflib.unified_diff(
-        text1.splitlines(),
-        text2.splitlines(),
-        fromfile=label1,
-        tofile=label2,
-    )
-    return '\n'.join(diff)
-
 #endregion
 
 
 #endregion
+
+def print_status(status: str, dept: int = 1):
+    """print the message about success or failure"""
+    if status:
+        print(f'{TAB}FAILURE\n' + shift_text(status, dept=dept))
+    else:
+        print(f"{TAB}OK")
+
+
 
 def file_comp_total(source: str, dest: str) -> str:
     """
@@ -175,8 +264,8 @@ def file_comp_total(source: str, dest: str) -> str:
         dc = read_bytes(d)
         if sc != dc:
             diff_info = (
-                f"{TAB}{s}: {stat(s)}\n"
-                f"{TAB}{d}: {stat(d)}"
+                f"{s}: {stat(s)}\n"
+                f"{d}: {stat(d)}"
             )
     else:  # both files are text
         sc = read_text(s)
@@ -186,14 +275,18 @@ def file_comp_total(source: str, dest: str) -> str:
                 sc, dc,
                 label1=s,
                 label2=d
-            ).replace('\n', f'\n{TAB}')
+            )
 
     if diff_info:
-        return f"{message}:\n{TAB}{diff_info}"
+        return f"{message}:\n{shift_text(diff_info)}"
     return ''
 
 
-def file_comp(request: CompRequest) -> str:
+def compare_files_regions(sourse: str, dest: str, regions: Sequence[PythoRegion]) -> Union[str, bool]:
+    return ''
+
+
+def file_comp(request: CompRequest) -> Union[str, bool]:
     s = request['source']
     if not os.path.exists(s):
         return f"source file {s} does not exist"
@@ -201,14 +294,18 @@ def file_comp(request: CompRequest) -> str:
     if not os.path.exists(d):
         return f"destination file {d} does not exist"
 
+    print(
+        f"Comparing {s} <---> {d}", end=''
+    )
+
     regions = request['regions']
     if not regions:  # compare files fully
-        return file_comp_total(s, d)
+        r = file_comp_total(s, d)
+        print_status(r)
+        return r
+    else:
+        print()
+        return compare_files_regions(s, d, regions)
 
-
-
-
-
-    return ''
 
 
