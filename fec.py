@@ -365,7 +365,7 @@ def main(
     raise_on_errors: bool = True
 ):
 
-    print(f"Reading the config from {config}")
+    print(f"Reading the config from {config}...\n\n")
     config: List[CompRequest] = read_json(config)
 
     res = True
@@ -373,8 +373,13 @@ def main(
         r = file_comp(item)
         res = res and r
 
-    if raise_on_errors and not res:
-        raise Exception("some diffs found")
+    if not res:
+        message = "SOME DIFFS FOUND"
+        if raise_on_errors:
+            raise Exception(message)
+        else:
+            print()
+            print(message)
 
 
 #endregion
