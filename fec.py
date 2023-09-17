@@ -371,7 +371,7 @@ def main(
     res = True
     for item in config:
         r = file_comp(item)
-        res = res and r
+        res = res and not r
 
     if not res:
         message = "SOME DIFFS FOUND"
