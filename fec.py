@@ -25,7 +25,16 @@ class CompRequest(TypedDict):
     """the request to compare 2 files"""
     source: str
     dest: str
+
     regions: Optional[List[PythoRegion]]
+    """
+    regions list if source and dest are files, empty means to compare files totally
+    """
+
+    file_regex: Optional[str]
+    """
+    regex for files names to compare if source and dest are folders, empty means all files from source
+    """
 
 #endregion
 
@@ -238,7 +247,6 @@ def print_status(status: str, dept: int = 1):
         print(f"{TAB}OK")
 
 
-
 def file_comp_total(source: str, dest: str) -> str:
     """
     >>> _ = file_comp_total
@@ -315,7 +323,10 @@ def compare_files_regions(sourse: str, dest: str, regions: Sequence[PythoRegion]
             if reg_name not in regions_dict:
                 res = False
                 print_status(
-                    f"there is no region '{reg_name}' in {file}, available regions: {sorted(regions_dict.keys())}",
+                    (
+                        f"there is no region '{reg_name}' in {file}, "
+                        f"available regions: {sorted(regions_dict.keys())}"
+                    ),
                     dept=2
                 )
                 break
@@ -338,7 +349,7 @@ def compare_files_regions(sourse: str, dest: str, regions: Sequence[PythoRegion]
     return res
 
 
-def file_comp(request: CompRequest) -> Union[str, bool]:
+def process_comp_item(request: CompRequest) -> Union[str, bool]:
     s = request['source']
     if not os.path.exists(s):
         return f"source file {s} does not exist"
@@ -350,14 +361,43 @@ def file_comp(request: CompRequest) -> Union[str, bool]:
         f"Comparing {s} <---> {d}", end=''
     )
 
-    regions = request.get('regions')
-    if not regions:  # compare files fully
-        r = file_comp_total(s, d)
-        print_status(r)
-        return r
-    else:
-        print()
-        return compare_files_regions(s, d, regions)
+    if os.path.isfile(s):
+        assert os.path.isfile(d), f"source and dest must both be directories in this case"
+
+        regions = request.get('regions')
+        if not regions:  # compare files fully
+            r = file_comp_total(s, d)
+            print_status(r)
+            return r
+        else:
+            print()
+            return compare_files_regions(s, d, regions)
+
+    print(f'{TAB}ARE DIRS')
+
+    assert os.path.isdir(s) and os.path.isdir(d), f"source and dest must be dirs if not files"
+    pattern = request.get('file_regex')
+
+    S, D = Path(s), Path(d)
+    all_files = [p for p in S.rglob('*') if p.is_file()]
+    if pattern:
+        all_files = [p for p in all_files if re.match(pattern, p.name)]
+
+    r = ''
+    for p in all_files:
+        src_file = str(p)
+        dst_file = str(D / p.relative_to(S))
+        print(
+            f">>> Comparing {src_file} <---> {dst_file}", end=''
+        )
+        if os.path.exists(dst_file):
+            status = file_comp_total(src_file, dst_file)
+        else:
+            status = 'no destination file'
+        print_status(status)
+        r = r or status
+
+    return r
 
 
 def main(
@@ -370,7 +410,7 @@ def main(
 
     res = True
     for item in config:
-        r = file_comp(item)
+        r = process_comp_item(item)
         res = res and not r
 
     if not res:

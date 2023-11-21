@@ -16,6 +16,11 @@
                 "in_dest": "RG 3"
             }
         ]
+    },
+    {
+        "source": "tests/dir1",
+        "dest": "tests/dir2",
+        "file_regex": ".*\\.txt"
     }
 ]
 
