@@ -350,12 +350,16 @@ def compare_files_regions(sourse: str, dest: str, regions: Sequence[PythoRegion]
 
 
 def process_comp_item(request: CompRequest) -> Union[str, bool]:
-    s = request['source']
-    if not os.path.exists(s):
-        return f"source file {s} does not exist"
-    d = request['dest']
-    if not os.path.exists(d):
-        return f"destination file {d} does not exist"
+
+    for key, desc in (
+        ('source', 'source'),
+        ('dest', 'destination')
+    ):
+        s = request[key]
+        if not os.path.exists(s):
+            m = f"{desc} file {s} does not exist"
+            print_status(m)
+            return m
 
     print(
         f"Comparing {s} <---> {d}", end=''
