@@ -1,5 +1,6 @@
 
-from typing import Union, Sequence, TypedDict, List, Optional, Dict, Tuple, Any
+from typing import Union, Sequence, TypedDict, List, Optional, Dict, Tuple, Literal
+from typing_extensions import TypeAlias
 
 import os
 import sys
@@ -15,10 +16,31 @@ TAB = '    '
 
 #region TYPES
 
-class PythoRegion(TypedDict):
+PathLike: TypeAlias = Union[str, os.PathLike]
+
+
+class PythonRegion(TypedDict):
     """the region info for python file"""
     in_source: str
     in_dest: str
+
+
+# REPAIR_SOURCE_STRATEGY: TypeAlias = Literal['older', 'newer', 'smaller', 'bigger', 'source', 'dest']
+# """
+# the strategy to choosing source file (from 2 candidates) for repairing from source to destination:
+#     - older: use older file as source
+#     - newer:
+#     - smaller: use smaller file as source
+#     - bigger:
+#     - source: use source file as repair source
+#     - dest: use destination file as repair source
+# """
+#
+#
+# class RepairOptions(TypedDict):
+#     strategy: REPAIR_SOURCE_STRATEGY
+#     assert_both_exist: bool
+#     """whether both source and destination must exist before repair"""
 
 
 class CompRequest(TypedDict):
@@ -26,7 +48,7 @@ class CompRequest(TypedDict):
     source: str
     dest: str
 
-    regions: Optional[List[PythoRegion]]
+    regions: Optional[List[PythonRegion]]
     """
     regions list if source and dest are files, empty means to compare files totally
     """
@@ -35,6 +57,20 @@ class CompRequest(TypedDict):
     """
     regex for files names to compare if source and dest are folders, empty means all files from source
     """
+
+    # repair_options: Optional[RepairOptions]
+    # """
+    # options for repairing in this case
+    # """
+
+
+# class FilesRepairError(Exception):
+#     """
+#     raises when the file cannot be repaired due to some reason
+#
+#     for instance, target region does not exist in the one of files at all
+#     """
+#     pass
 
 #endregion
 
@@ -52,21 +88,25 @@ def is_binary(path: str) -> bool:
     return is_binary(path)
 
 
-def read_text(result_path: Union[str, os.PathLike], encoding: str = 'utf-8'):
+def read_text(result_path: PathLike, encoding: str = 'utf-8'):
     return Path(result_path).read_text(encoding=encoding, errors='ignore')
 
 
-def read_bytes(path: Union[str, os.PathLike]) -> bytes:
+def read_bytes(path: PathLike) -> bytes:
     return Path(path).read_bytes()
 
 
-def read_json(path: str):
+def read_json(path: PathLike):
     with open(path, 'r') as f:
         return json.load(f)
 
 
-def stat(path: Union[str, os.PathLike]) -> str:
-    return str(Path(path).stat())
+def get_stat(path: PathLike):
+    return Path(path).stat()
+
+
+def get_stat_str(path: PathLike) -> str:
+    return str(get_stat(path))
 
 #endregion
 
@@ -186,8 +226,8 @@ def shift_text(text: str, linesep: str = '\n', dept: int = 1) -> str:
     t = TAB * dept
     return t + f'{linesep}{t}'.join(text.split(linesep))
 
-#endregion
 
+#endregion
 
 #region FUNCS
 
@@ -230,6 +270,49 @@ def find_start_end_pairs(starts: Sequence[int], ends: Sequence[int]) -> Dict[int
             watched_starts.append(i)
 
     return res
+
+
+# def get_repair_source(source: PathLike, dest: PathLike, repair_options: RepairOptions) -> PathLike:
+#     """
+#     performs some checks and selects one of input files as repair source according to options
+#     Args:
+#         source:
+#         dest:
+#         repair_options:
+#
+#     Returns:
+#         source or dest
+#     """
+#
+#     e1 = os.path.exists(source)
+#     e2 = os.path.exists(dest)
+#
+#     st = repair_options['strategy']
+#     must_exist = repair_options['assert_both_exist']
+#
+#     if not e1 and (must_exist or st == 'source'):
+#         raise FilesRepairError(f"source file does not exist: {str(source)}")
+#     if not e2 and (must_exist or st == 'dest'):
+#         raise FilesRepairError(f"destination file does not exist: {str(dest)}")
+#
+#     if st == 'source':
+#         return source
+#     if st == 'dest':
+#         return dest
+#
+#     s1 = get_stat(source)
+#     s2 = get_stat(dest)
+#
+#     if st == 'older':
+#         return source if s1.st_mtime < s2.st_mtime else dest
+#     if st == 'newer':
+#         return source if s1.st_mtime >= s2.st_mtime else dest
+#     if st == 'smaller':
+#         return source if s1.st_size < s2.st_size else dest
+#     if st == 'bigger':
+#         return source if s1.st_size >= s2.st_size else dest
+#
+#     raise ValueError(f"unknown repair strategy {st}, must be from {REPAIR_SOURCE_STRATEGY.__args__}")
 
 
 #endregion
@@ -282,8 +365,8 @@ def file_comp_total(source: str, dest: str) -> str:
         dc = read_bytes(d)
         if sc != dc:
             diff_info = (
-                f"{s}: {stat(s)}\n"
-                f"{d}: {stat(d)}"
+                f"{s}: {get_stat_str(s)}\n"
+                f"{d}: {get_stat_str(d)}"
             )
     else:  # both files are text
         sc = read_text(s)
@@ -300,7 +383,21 @@ def file_comp_total(source: str, dest: str) -> str:
     return ''
 
 
-def compare_files_regions(source: str, dest: str, regions: Sequence[PythoRegion]) -> Union[str, bool]:
+def compare_files_regions(
+    source: str,
+    dest: str,
+    regions: Sequence[PythonRegion],
+) -> Union[str, bool]:
+    """
+    compares regions in 2 files
+    Args:
+        source:
+        dest:
+        regions:
+
+    Returns:
+        flag about success
+    """
 
     s = read_text(source)
     d = read_text(dest)
@@ -359,7 +456,7 @@ def process_comp_item(request: CompRequest) -> Union[str, bool]:
         (d, 'destination')
     ):
         if not os.path.exists(_s):
-            m = f"{desc} file {_s} does not exist"
+            m = f"{desc} {_s} does not exist"
             print_status(m)
             return m
 
