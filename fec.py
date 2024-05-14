@@ -300,9 +300,9 @@ def file_comp_total(source: str, dest: str) -> str:
     return ''
 
 
-def compare_files_regions(sourse: str, dest: str, regions: Sequence[PythoRegion]) -> Union[str, bool]:
+def compare_files_regions(source: str, dest: str, regions: Sequence[PythoRegion]) -> Union[str, bool]:
 
-    s = read_text(sourse)
+    s = read_text(source)
     d = read_text(dest)
 
     sreg = find_regions(s)
@@ -317,7 +317,7 @@ def compare_files_regions(sourse: str, dest: str, regions: Sequence[PythoRegion]
         print(f"{TAB} Comparing regions '{ss}' <---> '{dd}' ", end='')
 
         for reg_name, regions_dict, file in (
-            (ss, sreg, sourse),
+            (ss, sreg, source),
             (dd, dreg, dest),
         ):
             if reg_name not in regions_dict:
@@ -330,13 +330,13 @@ def compare_files_regions(sourse: str, dest: str, regions: Sequence[PythoRegion]
                     dept=2
                 )
                 break
-        else:
+        else:  # normal processing
             ss_start, ss_end = sreg[ss]
             dd_start, dd_end = dreg[dd]
             diff_info = text_diff(
                 s[ss_start: ss_end],
                 d[dd_start: dd_end],
-                label1=f"region '{ss}' in {sourse} (chars [{ss_start}:{ss_end}])",
+                label1=f"region '{ss}' in {source} (chars [{ss_start}:{ss_end}])",
                 label2=f"region '{dd}' in {dest} (chars [{dd_start}:{dd_end}])"
             )
 
@@ -368,7 +368,7 @@ def process_comp_item(request: CompRequest) -> Union[str, bool]:
     )
 
     if os.path.isfile(s):
-        assert os.path.isfile(d), f"source and dest must both be directories in this case"
+        assert os.path.isfile(d), f"source and dest must both be files in this case"
 
         regions = request.get('regions')
         if not regions:  # compare files fully
