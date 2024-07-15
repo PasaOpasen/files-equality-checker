@@ -396,7 +396,7 @@ def compare_files_regions(
         regions:
 
     Returns:
-        flag about success
+        flag about failure
     """
 
     s = read_text(source)
@@ -405,7 +405,7 @@ def compare_files_regions(
     sreg = find_regions(s)
     dreg = find_regions(d)
 
-    res = True
+    failure = False
 
     for r in regions:
         ss = r['in_source']
@@ -418,7 +418,7 @@ def compare_files_regions(
             (dd, dreg, dest),
         ):
             if reg_name not in regions_dict:
-                res = False
+                failure = True
                 print_status(
                     (
                         f"there is no region '{reg_name}' in {file}, "
@@ -438,12 +438,12 @@ def compare_files_regions(
             )
 
             if diff_info:
-                res = False
+                failure = True
                 print_status(diff_info, dept=2)
             else:
                 print_status('', dept=2)
 
-    return res
+    return failure
 
 
 def process_comp_item(request: CompRequest) -> Union[str, bool]:
