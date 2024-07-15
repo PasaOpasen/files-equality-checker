@@ -131,7 +131,7 @@ def find_regions(file_text: str) -> Dict[str, Tuple[int, int]]:
 
     >>> t = read_text('tests/data/regions.py')
     >>> dct = find_regions(t)
-    >>> assert sorted(dct.keys()) == sorted(['RG 1', 'RG 2', 'RG 3', 'RG 3.1', 'RG 3.2'])
+    >>> assert sorted(dct.keys()) == sorted(['RG 1', 'RG 2', 'RG 3', 'RG 3.1', 'RG 3.2', 'RG 4'])
     >>> def show_part(region_name: str):
     ...     s, e = dct[region_name]
     ...     txt = t[s: e]
@@ -150,13 +150,13 @@ def find_regions(file_text: str) -> Dict[str, Tuple[int, int]]:
     """
 
     start_matches = list(
-        re.finditer(r"^#\s?region\s", file_text, re.MULTILINE)
+        re.finditer(r"^[ \t]*#\s?region\s", file_text, re.MULTILINE)
     )
     if not start_matches:
         return {}
 
     end_matches = list(
-        re.finditer(r"^#\s?endregion\s", file_text, re.MULTILINE)
+        re.finditer(r"^[ \t]*#\s?endregion\s", file_text, re.MULTILINE)
     )
     if not end_matches:
         return {}

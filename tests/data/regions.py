@@ -25,3 +25,10 @@
 
 # endregion
 
+
+def method():
+    #region RG 4
+    4
+    #endregion
+
+
